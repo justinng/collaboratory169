@@ -1,0 +1,69 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <script type="text/javascript" src="static/ProjectInstance.js"></script>
+    <script type="text/javascript" src="static/communication.js"></script>
+    <script type="text/javascript" src="static/play.js"></script>
+    <script type="text/javascript">
+    openSocket();
+    var projname = 'test_proj'
+    var bandname = 'test_band';
+    var proj = new Project(projname);
+    var path = "static/music/test_band/test_proj/";
+    </script>
+    <script type="text/javascript">
+    function setup() {
+    tellServer("newTrack", "bass");
+    tellServer("newTrack", "drums");
+
+    //tellServer("newLibraryClip", "woman.wav")
+
+    tellServer("newLibraryClip", "bass 1.wav");
+    tellServer("newLibraryClip", "bass 2.wav");
+    tellServer("newLibraryClip", "drums 1.wav");
+
+    //tellServer("addClipToTrack", ['bass', 1, 'woman.wav']);
+
+    tellServer("addClipToTrack", ['bass', 1, 'bass 1.wav']);
+    //tellServer("addClipToTrack", ['drums', 1, 'drums 1.wav']);
+    tellServer("trimClip", ["1", 0, 2.5])
+    /*tellServer("cloneClip", [1, 5.3])
+    tellServer("trimClip", [2, 0, 5.3])
+    tellServer("cloneClip", [2, 5.3]);
+
+    tellServer("addClipToTrack", ['bass', 9.6, 'bass 2.wav']);
+    tellServer("moveClip", [2, 9.6]);
+    tellServer("cloneClip", [4, 1]);
+    tellServer ("addClipToTrack", ['drums', 13.9, 'drums 1.wav']);
+*/
+
+//    tellServer("addClipToTrack", ['bass', 20.3, 'bass 2.wav']);
+//    tellServer("addClipToTrack", ['drums', 20.3, 'drums 1.wav']);
+//   tellServer("addClipToTrack", ['drums', 24.6, 'drums 1.wav']);
+
+    }
+    function onmessage() {}
+    function pos(p) {
+        position = p;
+    }
+
+
+
+    </script>
+
+
+
+</head>
+<body>
+<button id= "setup" type="button" onClick="setup()">setup </button>
+<button id= "play" type="button" onClick="play()">play </button>
+<button id= "pause" type="button" onClick="pause()">pause </button>
+<button id= "stop" type="button" onClick="stop()">stop</button>
+</br>
+ <button id= "pos1" type="button" onClick="pos(1)"> set position to 1 </button>
+    <button id= "pos3" type="button" onClick="pos(3)"> set position to 3 </button>
+    <button id= "pos7" type="button" onClick="pos(7)"> set position to 7 </button>
+    <button id= "pos10" type="button" onClick="pos(10)"> set position to 10 </button>
+</body>
+</html>
