@@ -1,0 +1,29 @@
+{% extends base.html %}
+{% block title %} Log-in Page {% end %}
+{% block body %}
+<body>
+<div class="login">
+    {% if error != None %}<p>Sorry, {{ escape(error) }}</p>{% end %}
+    <form method="post" action="/login">
+        <table class="fields">
+            <tr>
+                <td class="label"><label>E-mail</label></td>
+                <td><input type="email" value="" name="uname"/></td>
+            </tr>
+            <tr>
+                <td class="label"><label>Password</label></td>
+                <td><input type="password" value="" name="pass"/></td>
+            </tr>
+            <tr>
+                <td class="submit">
+                    <input type="submit" value="Log In" />
+                </td>
+                <td class="register">
+                    <a href="/signup">Register</a>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+</body>
+{% end %}

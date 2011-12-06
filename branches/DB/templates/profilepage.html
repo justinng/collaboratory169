@@ -1,0 +1,75 @@
+{% extends base.html %}
+
+
+{% block body %}
+<body id="profilepage">
+<div class="blurify">
+    <div class="topbar">
+        <h1 id="userName">{{ param.name }}'s Profile</h1>
+        <span class="logout"><a href="/logout">Logout</a></span>
+    </div>
+
+    <div class="bands">
+        <span class="myBands"> My Bands </span>
+        <ul class="bandNames">
+            {% for band in bands %}
+            <li>
+                <div class="band">
+                    <h4 class="bandName">&rarr; {{ escape(band.bandName) }}</h4>
+                    {% if band.bandName in ownsList %}
+                    <a href="manage/{{url_escape(band.bandName)}}"><img title="Manage Band" class="manageBand" src="{{ static_url('images/gear.png')}}" /></a>
+                    <img title="Add Project" class="addProject" src="{{ static_url('images/plus_icon.jpg')}}" />
+                    <img band="{{band.bandName}}" title="Delete Band" class="deleteBand" src="{{ static_url('images/Delete-icon.png')}}" />
+                    {% end %}
+                    <ul class="projects">	
+                        {% if mapping.has_key(band.bandName) %}
+                            {% set projects = mapping[band.bandName] %}
+                            {% for project in projects %}
+                                <li><a class="projname" href="/project/{{xhtml_escape(band.bandName)}}/{{xhtml_escape(project)}}/{{param.email}}" >{{ project }}</a></li>
+                            {% end %}
+                        {% end %}
+                    </ul>
+                </div>
+            </li>
+            {% end %}
+        </ul>
+        <button class="newband" value="start new band">Start New Band</button>
+    </div>
+</div>
+
+<div id="newBand">
+    <div class="field">
+        <label>Band Name</label>
+        <input name="name" type="text" value="" placeholder="Band Name" required="required" />
+    </div>
+    <div class="field">
+        <label>Invite Members</label>
+        <input name="add" type="text" value="" placeholder="E-mail separated by comma" />
+    </div>
+    <button class="addband" value="submit">Submit</button>
+    <button class="cancel" value="cancel">Cancel</button>
+</div>
+
+<div id="newProject">
+    <div class="field">
+        <label>Project Name</label>
+        <input name="projname" type="text" value="" placeholder="Project Name" required="required"/>
+    </div>
+    <button class="addproject" value="submit">Submit</button>
+    <button class="cancel" value="cancel">Cancel</button>
+    </div>
+</div>
+
+<div id="deleteBand">
+    <span class="verify">Are you sure you want to delete this band?</span>
+    <form method="post" action="/profile/delete">
+        <input type="hidden" name="bandName" value="" />
+        <input class="verify" type="submit" value="Yes" />
+    </form>
+    <button class="cancel">Cancel</button>
+</div>
+
+<script type="text/javascript" src="{{static_url('profile.js')}}"></script>
+</body>
+{% end %}
+

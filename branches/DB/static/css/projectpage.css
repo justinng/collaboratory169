@@ -1,0 +1,144 @@
+#projectbody {
+    width:1100px;
+    overflow: auto;
+}
+
+#controls {
+	margin: 10px;
+	padding: 10px;
+}
+.clip {
+    background-color:#b0e0e6;
+    margin:2px;
+    display: inline-block;
+	height: 56px;
+	font-size: 10px;
+	position: relative;
+}
+
+.libraryClip {
+    background-color:#b0e0e6;
+    margin:2px;
+    display: inline-block;
+	width: 155px;
+	height: 56px;
+}
+
+.clipName {
+    display: block;
+}
+
+.track {
+    margin:10.45px;
+	margin-left: 0px;
+    background-color:yellow;
+    display: inline-block;
+    height: 60px;
+	width: 660px;
+	position: relative;
+}	
+
+.trackName {
+	margin: 10px 5px 15px 5px;
+	/* margin-right: 0px;
+	margin-left: 5px;
+	margin-bottom: 16px; */
+	background-color: blue;
+    display: inline-block;
+    font-size: 16px;
+    color: white;
+	height: 60px;
+	width: 155px;
+	position: relative;
+}
+
+.trackName span.name {
+	display: block;
+    float: left;
+}
+
+.trackName .volRange {
+	display: block;
+	position: absolute;
+	bottom: 0;
+	right: 10px;
+}
+
+#workspace {
+    width: 850px;
+    height: 500px;
+    display:inline-block;
+    margin: 5px;
+	padding: 5px;
+	overflow-y: auto;
+}
+
+.editor {
+	margin:10px;
+	background-color:white;
+    /*height:510px;*/
+    width:660px;
+	margin-left: 0px;
+	float: left;
+	position: relative;
+	overflow-x: auto;
+}
+
+.controller {
+	margin: 10px;
+	margin-left: 0px;
+	margin-right: 0px;
+	background-color: white;
+	height: 510px;
+	width: 160px;
+	float: left;
+}
+.sidebar {
+    width:160px;
+	margin: 10px;
+	padding: 10px;
+    background-color:blue;
+    height:490px;
+	display:inline-block;
+	overflow-y: auto;
+}
+.cursor {
+	position:absolute;
+	width:2px;
+	background-color:red;
+	height:100%;
+	z-index:5;
+	top:0px;
+	left:0px;
+}
+#flash_record {
+    z-index: 1000;
+    width:300px;
+    height:150px;
+    position:absolute;	
+    left:500px;
+    top:10px;
+    display:none;
+	display:none;
+}
+
+.sidebarWhite {
+    width:260px;
+	margin: 10px;
+	padding: 10px;
+    background-color:white;
+    height:490px;
+	float: left;
+	overflow-y: auto;
+}
+
+.userDisplayEntry {
+    background-color:#ffffff;
+    margin:2px;
+    display: inline-block;
+	width: 250px;
+	height: 24px;
+}
+.userName {
+    display: block;
+}

@@ -1,0 +1,495 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <script type="text/javascript" src="/static/ProjectInstance.js"></script>
+    <script type="text/javascript" src="/static/communication.js"></script>
+    <script type="text/javascript" src="/static/js/jquery-1.6.4.js"></script>
+    <script type="text/javascript" src="/static/js/jquery.jplayer.min.js"></script>
+    <script type="text/javascript" src="/static/js/jquery-1.6.2.min.js"></script>
+	<script type="text/javascript" src="/static/js/jquery-ui-1.8.16.custom.min.js"></script>
+    <script type="text/javascript" src="/static/verifyWAV.js"></script>
+    <script type="text/javascript" src="/static/displayTracks.js"></script>
+	<script type="text/javascript" src="/static/newLibraryClip.js"></script>
+	<script type="text/javascript" src="/static/addClipToTrack.js"></script>
+	<script type="text/javascript" src="/static/trackDropEventHandler.js"></script>
+	<script type="text/javascript" src="/static/activeUsersDisplay.js"></script>
+	<script type="text/javascript" src="/static/js/html5slider.js"></script>
+       <script type="text/javascript" src="/static/swfobject.js"></script>
+    <script type="text/javascript" src="/static/play.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/css/projectpage.css">
+    <link type="text/css" href="/static/css/ui-lightness/jquery-ui-1.8.16.custom.css" rel="Stylesheet" />
+
+    <script type="text/javascript">
+        var bandname = '{{band}}'; //default
+        var projname = '{{proj}}'; //default
+        var username = '{{user}}';
+        var sliderVal = 5; //default
+        var oldTrim = 0; //default use for trimming clip, the left edge
+        //comment these out for single-project testing - this is a temporary way to designate different projects
+        //var bandname = prompt("Band name", "band");
+        //var projname = prompt("Project name", "proj");
+
+        var proj = new Project(projname);
+        openSocket();
+
+
+        var Locked = new Boolean();
+        Locked = false;
+        //function showValue(newValue) onchange handler now in displayTrack.
+        //{
+        ////   //since its illegal to have the same id for multiple elements, this will be changed to class and use jquery to fetch it.
+        ////    document.getElementById("range").innerHTML=newValue;
+        ////    document.getElementById("player").volume=parseFloat(newValue/100);
+        //    $(".range", this).html(newValue);
+        //    $(".player", this).volume=parseFloat(newValue/100);
+        //}
+
+        function onmessage(action, args) {
+            if (action == "newTrack") {
+                displayTracks(args);
+            }
+            if (action == "newLibraryClip") {
+            	//alert(args)
+                newLibraryClip(args, 90000);
+			}
+			if (action == "addClipToTrack") {
+				args = String(args).split(",");
+				//alert(proj.clipMap[args[1]].length)
+				//alert(args[2]);
+                addClipToTrack(args[0],args[1],args[2],args[3],args[4],args[5]);
+            }
+            if (action == "moveClip") {
+				args = String(args).split(",");
+				moveClip(args[0],args[1]);
+            }
+            if (action == "lockClip" || action == "unlockClip" || action == "grantClipLock") {
+                lockClip(action, args[0])
+            }
+            if (action == "lockTrack" || action == "unlockTrack" || action == "grantTrackLock") {
+                lockTrack(action, args[0])
+            }
+            if (action == "trimClip") {
+            	args = String(args).split(",");
+                trimClip(args[0], args[1],args[2])
+            }
+            if (action == "deleteClip") {
+                deleteClip(args)
+            }
+            if (action == "addUser") {
+            	addUser(args[0], args[1]);
+            }
+            if (action == "removeUser") {
+            	removeUser(args[0]);
+            }
+            //no clone clip
+        }
+        
+        // Functions that change the GUI
+		
+		function deleteClip(clipID) {
+			$("#clip" + clipID).remove();
+		}
+
+
+		function trimClip(clipID, newStartTime, newEndTime) {
+			// Change width according to new start and end times
+			// Multiply by sliderVal to go from seconds to pixels
+			var length = parseInt(newEndTime) - parseInt(newStartTime);
+			length = secondsToPixels(length);
+			$("#clip" + String(clipID)).css("width", String(length) +"px" );
+			
+			/*// tellServer to moveClip in case trimmed from the left
+			var pos = parseInt($("#clip" + String(clipID)).css('left').replace("px",""));
+			tellServer("moveClip", String(clipID) + "," + pixelsToSeconds(pos));
+			*/
+			
+			// Change the clip's x position according to the new start time
+			var pos = proj.clipMap[clipID].position;
+			$("#clip" + String(clipID)).css("left", secondsToPixels(pos));
+		}
+
+        function lockClip(action, clipID) {
+            var clipID = "#clip"+clipID;
+            if (action == "grantClipLock") {
+                $(clipID).css('background-color', '#FF9900');
+            }
+            else if (action == "lockClip") {
+                $(clipID).css('background-color', '#00FF00');
+                $(clipID).draggable( "option", "disabled", true );
+                $(clipID).resizable( "option", "disabled", true );
+            }
+            else if (action == "unlockClip") {
+                $(clipID).css('background-color', '#b0e0e6');
+                $(clipID).draggable( "option", "disabled", false );
+                $(clipID).resizable( "option", "disabled", false );
+            }
+        }
+
+        function lockTrack(action, track) {
+            trackID = convertTrackNameServerToClient(track);
+            if (action == "grantTrackLock") {
+                $('#'+'lock_'+trackID)[0].checked=true;
+                $('#'+trackID).css('background-color', '#0000FF');
+            }
+            else if (action == "lockTrack") {
+                $('#'+trackID).css('background-color', '#FF0000');
+                console.log(proj.trackMap[track]);
+                $('#'+trackID).droppable("option", "disabled", true);
+                for (clipname in proj.trackMap[track].clipMap) {
+                    var clipID = "#clip"+clipname;
+                    $(clipID).draggable( "option", "disabled", true );
+                    $(clipID).resizable( "option", "disabled", true );
+                }
+            }
+            else if (action == "unlockTrack") {
+                $('#'+trackID).css('background-color', 'yellow');
+                $('#'+trackID).droppable("option", "disabled", false);
+                for (clipname in proj.trackMap[track].clipMap) {
+                    var clipID = "#clip"+clipname;
+                    $(clipID).draggable( "option", "disabled", false );
+                    $(clipID).resizable( "option", "disabled", false );
+                    $(clipID).css('opacity', 1);
+                    //console.log($(clipID));
+                }
+            }
+        }
+
+        function convertTrackNameServerToClient(trackName) {
+            return "track"+String(trackName).replace(new RegExp(' ', 'g'),'_');
+        }
+       function convertTrackNameClientToServer(trackName) {  //what if the original name had underscores?
+            return String(trackName).replace(new RegExp('_', 'g'),' ').slice(5);
+        }
+        
+        function displayTracks(trackName) {
+        	trackID = convertTrackNameServerToClient(trackName);
+            $("#trackSpace").append("<div class='track' id="+trackID+"></div>");
+            var checkbox = "<input type='checkbox' id='lock_"+trackID+"' name='lock_"+trackID+"' value = 'locked' onclick='trackLockHandler(this)'/>"+trackName+"</br>";
+            var volume = "<input id='volume" + trackName + "' type='range' min='0' max='100' value='100' step='1' /><span class='volRange'>100</span>";
+			$("#trackController").append("<div class='trackName' ><span class='name'>"+checkbox+"</span>"+volume+"</div>");
+			$("#volume"+trackName).bind("change", function(){
+				track = proj.trackMap[removeFirstNChars(this.id, 6)];
+				track.volume = this.value;
+				for (i = 0; i < numChannels; i++){
+					if (channels[i].trackName == track.name){
+						channels[i].audio.volume = track.volume/100;
+					}
+				}
+			});
+			var tWidth = $(".track").css("width");
+			$(".track").css("width", tWidth);
+			$("#track" + String(trackName).replace(new RegExp(' ', 'g'),'_')).droppable({
+					greedy: true,
+					drop: dropHandler
+				});
+        }
+		
+        function trackLockHandler(checkbox) {
+        var track = convertTrackNameClientToServer(checkbox.name.slice(5));
+            console.log("trackname: "+track);
+            var noOtherLocks = true;
+            for (clip in proj.trackMap[track].clipMap) {
+                if (proj.trackMap[track].clipMap[clip].locked) {
+                    noOtherLocks = false;
+                    break;
+                }
+            }
+            if (checkbox.checked) {
+                checkbox.checked = false;  //in case the server rejects it
+                if (noOtherLocks) {
+                    tellServer("lockTrack", track);
+                }
+            }
+            else {
+                tellServer("unlockTrack", track);
+            }
+        }
+        function moveClip(clipID, newPosition)	{
+        	newPosition = secondsToPixels(newPosition);
+        	$("#clip" + String(clipID)).css("left", newPosition +"px");
+        }
+        
+        function removeFirstNChars( str, n ) {
+			return str.replace( new RegExp("^.{0," +n+ "}(.*)"),  "$1" );
+		}			
+
+		/* Called when the upload button is clicked. Sets up hidden iframe. */
+        function initUpload() {
+            document.getElementById('uploadform').onsubmit = function() {
+                document.getElementById('uploadform').target = "upload_target_iframe";
+                document.getElementById('status').style.display="block";
+                document.fileForm.action="/upload/"+bandname+"/"+projname;
+            }
+            
+            
+
+            iframe = document.getElementById("upload_target_iframe");
+            if (iframe.addEventListener){
+                iframe.addEventListener("load", uploadComplete, true);
+            }
+            if (iframe.attachEvent){
+                iframe.attachEvent("onload", uploadComplete);
+            }
+        }
+
+        /* Called when a file upload has completed. */
+        function uploadComplete(){
+            //document.getElementById("uploadform").removeChild( document.getElementById("status") );
+            document.getElementById("status").style.display="none";
+            var fileName = document.getElementById('audio_file').value;
+            if (fileName.indexOf("/") != -1) {
+            	fileName = fileName.split("/");
+            } else {
+            	fileName = fileName.split("\\");
+            }
+            //tellServer("newLibraryClip", fileName[fileName.length - 1]);
+        }
+        
+        function saveCommandDispatcher(){
+        	tellServer("save", "0");
+        }
+
+	function overHandler(event, ui) {
+		cssWidth = $(".track").css("width");
+		cssWidth = cssWidth.replace("px", "");
+		cssWidth = parseInt(cssWidth);
+		cssWidth = cssWidth + 5*sliderVal;
+		cssWidth = String(cssWidth) + "px";
+		$(".track").css("width", cssWidth);
+	}
+
+		//Drag and Drop functionality on startup, assuming all objects are already there
+		
+		$(function() {
+			$(".libraryClip").draggable({
+				revert: true,
+				helper: 'clone'
+			});
+			$(".clip").draggable({
+				snap: true,
+				axis: 'x',
+				containment: parent,
+				stop: overDragHandler
+			});
+
+			$("#trackSpace").droppable({
+				over: overHandler,
+				accept: ".clip"
+			});
+			$(".track").droppable({
+				greedy: true,
+				drop: dropHandler
+			});
+		});
+		
+		//Timeline Slider Initialized
+		$(function() {
+			$( "#timeLine" ).slider({
+				max:25,
+				min:5,
+				step:1,
+				stop: sliderHandler
+			});
+		});
+		
+		// Set the trackSpace onclick event to move the playbackCursor
+		$(function() {
+    		$("#trackSpace").click(function(event) {
+    			console.log("pagex :" +event.pageX);
+			    var relX = event.pageX - $(this).offset().left + $('.editor').scrollLeft();
+				$("#playbackCursor").css("left", relX);
+				position = pixelsToSeconds(relX);
+				currentPosition = position;
+				//alert(position)
+			});
+		});
+		
+		// Handlers set off by events from the GUI
+		
+		// Cloning Handler: only one clip can be cloned at a time
+		function cloneHandler() {
+			var clip = null;
+			var counter = 0;
+			var clipObject = null;
+			$(".clip").each(function() {
+				if(proj.clipMap[removeFirstNChars(this.id, 4)].lockedByMe) {
+					if(counter < 1) {
+						clip = this;
+						counter = 1
+					} else {
+						alert("Please select only one clip at a time to clone");
+						clip = null;
+					}
+				}	
+			});
+			if(clip == null){
+				//alert("No clip selected");
+			} else {
+				//alert(clip.id)
+				//alert($(clip).parent(".track").attr('id'));
+				//alert(proj.clipMap[removeFirstNChars(String(clip.id), 4)].filename)
+				//alert(position)
+				var cloned = false;
+				$(".track").each(function() {
+					if(proj.trackMap[convertTrackNameClientToServer(this.id)].lockedByMe) {
+						cloned = true;
+						tellServer("cloneClip", [removeFirstNChars(String(clip.id), 4), 
+						convertTrackNameClientToServer(this.id), position ]);
+					}
+				});
+				if (!cloned) {alert("You must select a track to clone a clip");}
+			}				
+		}
+		
+		// Handler for the Delete Button
+		function deleteHandler() {
+			$(".clip").each(function() {
+				if (proj.clipMap[removeFirstNChars(this.id, 4)].lockedByMe) {
+					tellServer("deleteClip", removeFirstNChars(this.id, 4));
+				}
+			});
+			//$(".clip").each(function() {
+			//	if (proj.clipMap[removeFirstNChars(this.id, 4)].lockedByMe) {
+			//		tellServer("deleteClip", removeFirstNChars(this.id, 4));
+			//	}
+			//});
+		}
+
+		// Handler for the drop when adding clip to track or moving clip
+		function dropHandler(event, ui) {
+			//moving clips
+			if (ui.draggable.is('.clip')){
+				var clipID = removeFirstNChars(ui.draggable.attr('id'), 4);
+				var pos = pixelsToSeconds(ui.position.left);
+				tellServer("moveClip", [clipID, pos] );
+			//dropping library clips
+			} else if (ui.draggable.is('.libraryClip')) {
+				var trackID = removeFirstNChars(String(event.target.id).replace(new RegExp('_', 'g'),' '), 5);
+				var pos = pixelsToSeconds(posCorrect(parseInt(ui.position.left), "back"));
+				pos = (pos + $('.editor').scrollLeft());
+				
+				var libraryClipName = removeFirstNChars(String(ui.draggable.attr('id').replace(new RegExp('_', 'g'),' ')), 4) + "." + String(ui.draggable.attr('title'));
+
+				tellServer("addClipToTrack", [trackID, pos, libraryClipName]);
+			} else {
+				alert("Uh oh");
+			}
+		}
+		
+		function overDragHandler(event, ui) {
+			var clipName = ui.helper.attr('id');
+			var clipMaxLength = Math.floor(proj.clipMap[removeFirstNChars(clipName, 4)].origLength);
+			var leftPos = parseInt(ui.position.left);
+			var currentTrackLength = $(".track").css("width").replace("px","");
+			var newTrackLength = leftPos + clipMaxLength + 25;
+			if (newTrackLength >= currentTrackLength) {
+				$(".track").css("width", String(newTrackLength + 20) + "px");
+				var clipID = removeFirstNChars(ui.helper.attr('id'), 4);
+				var pos = pixelsToSeconds(ui.position.left);
+				tellServer("moveClip", [clipID, pos] );
+			}
+		}
+		
+		// Handler for a trim
+		function resizeHandler(event, ui) {
+			// Subtract old left position and new position to find how much was trimmed on the left
+			// Divide by sliderVal to go from pixels to seconds
+			
+			var trimmedLeft = (ui.originalPosition.left - ui.position.left);
+			trimmedLeft = pixelsToSeconds(trimmedLeft);
+			
+			// Subtract old width and new width to find out how much was trimmed if trimmed on the right
+			// Divide by sliderVal to go from pixels to seconds
+			var trimmedRight = (ui.originalSize.width - ui.size.width);
+			trimmedRight = pixelsToSeconds(trimmedRight);
+			
+			// If trimmed on the left, endtime is the same as before
+			if (trimmedLeft != 0) {
+				trimmedRight = 0
+			}
+			
+			// Compute new start and end times based on how much was trimmed
+			startTime = Math.floor(proj.clipMap[removeFirstNChars(event.target.id, 4)].startTime) - trimmedLeft
+			endTime = Math.floor(proj.clipMap[removeFirstNChars(event.target.id, 4)].endTime) - trimmedRight
+			tellServer("trimClip", removeFirstNChars(event.target.id, 4) + "," + startTime + "," + endTime)
+		}
+		
+		// Handler for the slider change
+		function sliderHandler(event, ui) {
+			sliderVal = ui.value;
+			var farthestClip = 0;
+			$(".clip").each(function() {
+				var maxWidth = Math.floor(proj.clipMap[removeFirstNChars(this.id, 4)].origLength) * sliderVal;
+				var currentWidth = Math.floor(proj.clipMap[removeFirstNChars(this.id, 4)].length) * sliderVal;
+				var pos = Math.floor(proj.clipMap[removeFirstNChars(this.id, 4)].position) * sliderVal;
+				$(this).resizable("option", "maxWidth", maxWidth);
+				$(this).css("width", String(currentWidth) + "px");
+				$(this).css("left", String(pos) +"px");
+				//left = parseInt($(this).css("left"));
+				var currentTrackLength = $(".track").css("width").replace("px","");
+				var newTrackLength = pos + currentWidth + 25;
+				if (newTrackLength >= currentTrackLength) {
+					if (newTrackLength > farthestClip) {
+						farthestClip = newTrackLength
+					}
+				}
+			});
+			if (farthestClip > 0) {
+				//$('.track').each(function() {
+					//$(this).css("width", String(parseInt($(this).css("width")) * ui.value / sliderVal) + "px")
+				//});
+				$(".track").css("width", String(farthestClip + 5*sliderVal) + "px");
+			}
+			$("#playbackCursor").css("left", String(currentPosition*sliderVal)+"px");
+		}
+		function pixelsToSeconds(px) {
+			return px/sliderVal;
+		}
+		function secondsToPixels(sec) {
+			return sec*sliderVal;
+		}
+
+	    </script>
+
+
+    <meta charset="utf-8">
+    <title>cs169 proj</title>
+</head>
+
+<body id="projectbody">
+<header >ColLaborate! {{ band +" - "+proj }}</header>
+<a href="/profile">Return to Profile</a>
+<br />
+<div id="controls">
+    <button id= "Undo" type="button">Undo</button>
+    <button id="Clone" type="button" onclick="cloneHandler()">Clone</button>
+    <button id= "Delete" type="button" onClick="deleteHandler()">Delete</button>
+    <button id= "play"type="button" onClick="play()"><img src="/static/images/play.png" height="25px" width="25px" align="middle" /></button>
+    <button id= "pause"type="button" onClick="pause()"><img src="/static/images/pause.png" height="25px" width = "25px" align="middle" /></button>
+    <button id= "stop"type="button" onClick="stop()"><img src="/static/images/stop.png" height="25px" width = "25px" align="middle" /></button>
+    <button id= "record"type="button" onClick="record()"><img src="/static/images/record.png" height="25px" width = "25px" align="middle" /></button>
+    <button id="newTrack" type="button">New Track</button>
+    <button id="save" type="button" onClick="saveCommandDispatcher()">Save</button>
+    <form id="uploadform" enctype="multipart/form-data" method="POST" name="fileForm">
+        <input type="file" id="audio_file" name="audio" onchange="verifyWAV()"/>
+        <input type="submit" id="submitID" name="submitName" value="Upload Clip" onclick = "initUpload();">
+        <span id="status" style="display:none">uploading...</span>
+        <iframe id="upload_target_iframe" name="upload_target_iframe" src="" style="width:0;height:0;border:0px"></iframe>
+    </form>
+    <!--<button id= "upload" type="button" onclick="upload_file()">Upload clip</button>-->
+</div>
+
+	<div id="flashContent"><p></p></div>
+<div id="workspace">
+	<div id="trackController" class="controller"></div>
+	<div id="trackSpace" class="editor">
+		<div id="playbackCursor" class="cursor"></div>
+	</div>
+</div>
+   
+    <div id="library" class="sidebar"></div>
+    <div id="usersDisplay" class="sidebarWhite"></div>
+    <div id="timeLine" style="display:block;width:820px;background-color:blue;"></div>
+
+</body>
+</html>

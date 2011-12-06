@@ -1,0 +1,38 @@
+{% extends base.html %}
+
+{% block title %} Signup Page {% end %}
+
+{% block body %}
+
+<body id="signup">
+<h1 class="signup">Sign-Up Page</h1>
+{% if error==None %}
+<p style="display:none;"></p>
+{% else %}
+<p>Something went wrong: {{error}}</p>
+{% end %}
+<div class="form">
+    <form method="post" action="/signup">
+        <div class="field">
+            <label>Name*</label>
+            <input type="text" name="name" placeholder="Name" value="" required="required" maxlength="30"/>
+        </div>
+        <div class="field">
+            <label>E-mail*</label>
+            <input type="email" name="email" placeholder="E-mail" required="required"/>
+        </div>
+        <div class="field">
+        	<label>Password*</label>
+            <input type="password" name="password" placeholder="Password" required="required" maxlength="30" />
+        </div>
+        <div class="field">
+        	<label>Confirm Password*</label>
+            <input type="password" name="conpassword" placeholder="Confirm Password" required="required" maxlength="30" />
+        </div>
+        <input type="submit" value="Submit" />
+        <a href="/login">Cancel</a>
+    </form>
+</div>
+</body>
+
+{% end %}
