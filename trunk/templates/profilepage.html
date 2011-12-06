@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Profile Page</title>
+<link rel="stylesheet" href="static/css/profilepage.css" />
+<script type="text/javascript" src="static/js/jquery-1.6.4.js"></script>
+</head>
+
+<body id="profilepage">
+
+<div class="topbar">
+	<h1 id="userName">Dom's Profile</h1>
+    <span class="logout">Logout</span>
+</div>
+
+<div class="bands">
+    <span class="myBands"> My Bands </span>
+	<ul class="bandNames">
+    	<li>
+        	<div class="band">
+                <h4 class="bandName">&rarr; Band 1</h4>
+                <img title="Manage Band" class="manageBand" src="static/gear.png" />
+                <ul class="projects">
+                    <li>The coolest song ever</li> 
+                    <li>Our first Song</li>
+                    <a href="project/Band 1/The coolest song ever">The coolest song ever</a>
+                </ul>
+            </div>
+        </li>
+        <li>
+        	<div class="band">
+                <h4 class="bandName">&rarr; Band 2</h4>
+                <img title="Manage Band" class="manageBand" src="static/gear.png"/>
+            <ul class="projects">
+            	<li>Yet another song</li>
+                <li>The Second song</li>
+            </ul>
+            </div>
+        </li>
+        <li>
+        	<div class="band">
+                <h4 class="bandName">&rarr; Band 3</h4>
+                <img title="Manage Band" class="manageBand" src="static/gear.png"/>
+            <ul class="projects">
+            </ul>
+            </div>
+        </li>
+    </ul>
+    <button class="newband" value="start new band">Start New Band</button>
+</div>
+
+<div id="recentProjects">
+	<span>Recent Projects</span>
+	<ul class="recent">
+    	<li>The coolest song ever</li>
+        <li>Yet another song</li>
+        <li>Our first song</li>
+    </ul>
+</div>
+<script type="text/javascript" src="static/profile.js"></script>
+</body>
+</html>

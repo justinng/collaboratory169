@@ -1,0 +1,128 @@
+@charset "utf-8";
+/* CSS Document for Collaboratory*/
+
+#profilepage {
+	position: relative;
+	display: block;
+	margin-left: 50px;
+	width: 800px;
+	border: 3px solid black;
+	border-top-width: 0px;
+}
+
+div.topbar {
+	display:block;
+	position: relative;
+	width: 800px;
+	height: 200px;
+	padding: 5px;
+}
+
+.topbar #userName {
+	color: red;
+	font: 28px Helvetica, Arial, Verdana;
+	display: inline-block;
+	width: 300px;
+}
+
+.topbar span.logout {
+	float: right;
+	margin-right: 50px;
+	color: blue;
+	font-family: Arial;
+	display: inline-block;
+}
+
+div.bands {
+	display: inline-block;
+	position: relative;
+	width: 400px;
+	padding: 10px;
+}
+
+div.bands span.myBands {
+	font: 20px Helvetica, Arial, Verdana;
+	display: block;
+	color: red;
+}
+
+div.bands ul.bandNames {
+	list-style: none;
+	margin: 20px 0 0 20px;
+	display: inline-block;
+}
+
+div.bands ul.bandNames li {
+	list-style: none;
+}
+
+ul.bandNames div.band h4.bandName {
+	font: 20px Verdana;
+	color: green;
+	cursor: pointer;
+	display:inline-block;
+	vertical-align:middle;
+}
+
+ul.bandNames div.band h4.bandName:hover {
+	color: gold;
+}
+
+img.manageBand {
+	width: 25px;
+	height: 25px;
+	display: inline-block;
+	vertical-align:middle;
+	padding-left: 3px;
+}
+
+div.band ul.projects {
+	display: none;
+	list-style: none;
+}
+
+ul.projects li {
+	list-style: none;
+	font: 16px Helvetica;
+	color: blue;
+	padding-bottom: 5px;
+}
+
+button.newband {
+    display: block;
+    position: relative;
+    margin: 30px 0 0 40px;
+}
+
+/* Start if RecentProjects tab */
+#recentProjects {
+	border: 2px solid black;
+	border-right-width: 0px;
+	display: inline-block;
+	position: absolute;
+	top: 200px;
+	right: 0;
+	width: 200px;
+	padding: 10px;
+}
+
+#recentProjects span {
+	font: 25px Helvetica;
+	color: red;
+}
+
+#recentProjects ul.recent {
+	list-style: none;
+	padding: 0;
+}
+
+#recentProjects ul.recent li {
+	list-style: none;
+	font: 16px Verdana;
+	padding-bottom: 10px;
+	color: blue;
+}
+
+
+	
+	
