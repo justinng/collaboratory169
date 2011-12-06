@@ -8,6 +8,9 @@ Definitions for back-end Project Instance Module classes.
 
 import os
 import threading
+
+import logging
+
 from py.AudioUtil import *
 
 class SessionManager(object):
@@ -22,7 +25,7 @@ class SessionManager(object):
     # storage for the instance reference
     __instance = None
 
-    def __init__(self):
+    def __init__(self, db):
         ''' Create singleton instance '''
         # Check whether we already have an instance
         if SessionManager.__instance is None:
@@ -34,6 +37,7 @@ class SessionManager(object):
         
         self.__bandMap = {}
         self.__bandMapLock = threading.Lock()
+        self.__db = db
 
     def __getattr__(self, attr):
         ''' Delegate access to implementation '''
@@ -57,14 +61,14 @@ class SessionManager(object):
         bandManager = self.__bandMap[bandName]
         self.__bandMapLock.release()
         
-        return bandManager._load(projectName)
+        return bandManager._load(projectName, self.__db)
     
     def unload(self, bandName, projectName):
         '''
         Unloads the Project from memory, and the BandManager as well if it no longer contains any Projects.  Assumes that there are no clients using the project!
         '''
-        bandManager = self.__bandMap[bandName]
-        if bandManager:
+        if bandName in self.__bandMap:
+            bandManager = self.__bandMap[bandName]
             bandManager._unload(projectName)
             
             # remove BandManager from __bandMap if it is empty
@@ -74,6 +78,16 @@ class SessionManager(object):
                 self.__bandMapLock.release()
         return
     
+    def save(self, bandName, projectName):
+        '''
+        Saves the specified project to the database, or does nothing if project is not in memory.  Returns success boolean.
+        '''
+        bandManager = self.__bandMap[bandName]
+        if bandManager:
+            return bandManager._save(projectName, self.__db)
+        else:
+            return False
+    
     def getBand(self, bandName):
         '''
         Returns the specified BandManager, or False if it does not exist (which only occurs if that band has no projects loaded).
@@ -82,7 +96,6 @@ class SessionManager(object):
             return self.__bandMap[bandName]
         else:
             return False
-
 
 class BandManager(object):
     '''
@@ -94,19 +107,46 @@ class BandManager(object):
         self.__projectMap = {}
         self.__projectMapLock = threading.Lock()
         
-    def _load(self, projectName):
+    def _load(self, projectName, db):
         '''
         Ensures that the specified project is loaded.  If project does not exist, a new one is created.
         '''
         if projectName not in self.__projectMap:
-            ''' TODO: load from database '''
             
-            #if project is not in database, make a new, empty one
+            # create new Project
             self.__projectMapLock.acquire()
             project = Project(projectName)
             self.__projectMap[projectName] = project
-            self.__projectMapLock.release()
             
+            #check if database has info for existing project (if not, skip and return new project)
+            projectQuery = db.get("SELECT P.ID, P.files FROM Project P, BandOwnsProjects O WHERE O.bandName = \"%(bandname)s\" AND P.name = \"%(projectname)s\"" % {"bandname":self.__bandName, "projectname":projectName})
+            
+            # if project exists in database...
+            if projectQuery:
+                
+                projectID = projectQuery.ID
+                projectFiles = projectQuery.files
+                logging.info("Loading project (ID: %(id)i) from the database" % {"id":projectID})
+                
+                # load all library clips
+                
+                if (projectFiles):
+                    for fileName in projectFiles.split("<>"):
+                        print("making library clip: " + "%(COLdirectory)s\\static\\music\\%(bandname)s\\%(projname)s\\%(filename)s" % {"COLdirectory":os.path.split(os.path.dirname(__file__))[0], "bandname":self.__bandName, "projname":projectName, "filename":fileName})
+                        project.newLibraryClip("%(COLdirectory)s/static/music//%(bandname)s//%(projname)s//%(filename)s" % {"COLdirectory":os.path.split(os.path.dirname(__file__))[0], "bandname":self.__bandName, "projname":projectName, "filename":fileName}, fileName)
+                    
+                # load all tracks/clips
+                for track in db.query("SELECT * FROM Track T WHERE T.projectID = %(projectid)i" % {"projectid":projectID}):
+                    # create Tracks
+                    project.newTrack(track.name, track.volume, track.panning)
+                    # add Clips to Tracks
+                    for clipInfo in track.clips.split(","):
+                        if(clipInfo):
+                            clipParameters = clipInfo.split("|")
+                            project.addClipToTrack(track.name, float(clipParameters[0]), clipParameters[1], float(clipParameters[2]), float(clipParameters[3]))
+                        
+            #if project is not in database, make a new, empty one
+        self.__projectMapLock.release()
         return project
     
     def _unload(self, projectName):
@@ -120,6 +160,56 @@ class BandManager(object):
             
         return
     
+    def _save(self, projectName, db):
+        '''
+        Saves specified project to the database.  Returns True if save was successfully completed, or False if nothing was done.
+        '''
+        logging.info("Project %(projectname)s save initiated..." % {"projectname":projectName})
+        
+        if projectName in self.__projectMap:
+            
+            projectQuery = db.get("SELECT DISTINCT P.ID FROM Project P, BandOwnsProjects O WHERE O.bandName = \"%(bandname)s\" AND P.name = \"%(projectname)s\"" % {"bandname":self.__bandName, "projectname":projectName})
+            existingProjectID = None
+            if projectQuery:
+                existingProjectID = projectQuery.ID
+            project = self.__projectMap[projectName]
+            
+            oldTracksQuery = []
+            # if project already exists in database...
+            if existingProjectID:
+                # get all globalIDs of old Track entries (to be deleted after save operation is finished)
+                oldTracksQuery = db.query("SELECT T.globalID FROM Track T WHERE T.projectID = %(projectid)i" % {"projectid":existingProjectID})
+                # update entry in Project table
+                db.execute("UPDATE Project SET name = \"%(projectname)s\", files = \"%(libraryclipnames)s\" WHERE ID = %(projectid)i" % {"projectname":projectName, "libraryclipnames":project._getLibraryClipNames(), "projectid":existingProjectID})
+            
+            else:
+                # create new entry in Project table, reassign existingProjectID
+                existingProjectID = db.execute("INSERT INTO Project (name, files) VALUES (\"%(projectname)s\", \"%(libraryclipnames)s\")" % {"projectname":projectName, "libraryclipnames":project._getLibraryClipNames()})
+                
+                # add project under Band table
+                db.execute("INSERT INTO BandOwnsProjects (bandName, ID) VALUES (\"%(bandname)s\", %(projectid)i)" % {"bandname":self.__bandName, "projectid":existingProjectID})
+                
+                # add project under every User
+                for bandMemberTuple in db.query("SELECT M.email FROM MemberOf M WHERE M.bandName = \"%(bandname)s\"" % {"bandname":self.__bandName}):
+                    db.execute("INSERT INTO UserOwnsProjects (email, ID) VALUES (\"%(email)s\", %(projectid)i)" % {"email":bandMemberTuple.email, "projectid":existingProjectID})
+                
+            for track in project._getTracks():
+                # save all current tracks
+                logging.info("Saving info into Track table")
+                db.execute("INSERT INTO Track(projectID, name, clips, volume, panning) VALUES (%(projectid)i, \"%(trackname)s\", \"%(trackclipinfo)s\", %(volume)i, %(panning)i)" % {"projectid":existingProjectID, "trackname":track._getName(), "trackclipinfo":track._clipInfo(), "volume":track._getVolume(), "panning":track._getPanning()})
+            
+            # delete old Track entries in oldTracksQuery, if there are any
+            for track in oldTracksQuery:
+                db.execute("DELETE FROM Track WHERE globalID = %(globalid)i" % {"globalid":track.globalID})
+                
+            logging.info("Project %(projectname)s save completed" % {"projectname":projectName})
+            
+            return True
+        
+        else:
+            logging.error("Project %(projectname)s does not exist in memory!" % {"projectname":projectName})
+            return False
+                
     def _isEmpty(self):
         '''
         Returns True if this BandManager contains no active Projects.
@@ -130,7 +220,8 @@ class BandManager(object):
             return True
         
     def getName(self):
-    	return self.__bandName
+        return self.__bandName
+ 
     def getProject(self, projectName):
         '''
         Returns the specified Project under this BandManager, or False if it does not exist.
@@ -158,7 +249,7 @@ class Project(object):
         self.__recordingCounter = 1
         self.__recordingCounterLock = threading.Lock()
         self.__currentUsersMap = {}
-        self.__availableUserColors = ["C0C0C0", "FF00FF", "00FFFF", "FFFF00", "0000FF", "00FF00", "FF0000"]
+        self.__availableUserColors = ["#C0C0C0", "#FF00FF", "#00FFFF", "#FFFF00", "#0000FF", "#00FF00", "#FF0000"]
         self.__usersLock = threading.Lock()  # use this lock for both currentUsersMap and availableUserColors
         
     def addUser(self, username):
@@ -169,7 +260,7 @@ class Project(object):
         color = ""
         self.__usersLock.acquire()
         if len(self.__availableUserColors) <= 0:
-            color = "000000"
+            color = "#000000"
         else:
             color = self.__availableUserColors.pop()
         self.__currentUsersMap[username] = color
@@ -188,8 +279,24 @@ class Project(object):
             return False
         
     def getName(self):
-    	return self.__name
+        return self.__name
+    
+    def _getTracks(self):
+        return self.__trackMap.values()
+    
+    def _getLibraryClipNames(self):
+        libraryClipNamesList = []
+        for libraryClipName in self.__libraryClipMap.keys():
+            # append string in the following format: [position (in seconds)] [libraryClipName] [startTime] [endTime]
+            libraryClipNamesList.append("<>")
+            libraryClipNamesList.append(libraryClipName)
         
+        if libraryClipNamesList:
+            # remove leading "><" separator
+            libraryClipNamesList.remove("<>")
+        
+        return "".join(libraryClipNamesList)
+    
     def rename(self, newName):
         '''
         TODO: check DB for name collision
@@ -202,13 +309,13 @@ class Project(object):
         '''
         return
         
-    def newTrack(self, trackName):
+    def newTrack(self, trackName, volume=100, panning=50):
         '''
         Add a new Track.  Returns success/failure.
         '''
         
         if trackName not in self.__trackMap.keys():
-            self.__trackMap[trackName] = Track(trackName)
+            self.__trackMap[trackName] = Track(trackName, volume, panning)
             return True
         else:
             return False
@@ -217,7 +324,8 @@ class Project(object):
         '''
         Add a new LibraryClip.  The given libraryClipName should be unique, and the filepath should be valid.  Returns success/failure.
         '''
-        if libraryClipName not in self.__libraryClipMap.keys():
+        if libraryClipName not in self.__libraryClipMap.keys() and os.path.exists(filepath):
+            renderWaveform(filepath, libraryClipName)
             self.__libraryClipMap[libraryClipName] = LibraryClip(filepath, libraryClipName)
             return True
         else:
@@ -407,12 +515,37 @@ class Track(object):
     '''
     Represents a track in the project.
     '''
-    def __init__(self, name):
+    def __init__(self, name, volume=100, panning=0):
         self.__name = name
         self.__clipsSet = set([])
-        self.__volume = 100
-        self.__panning = 0
+        self.__volume = volume
+        self.__panning = panning
         self.__locked = False
+        
+    def _getName(self):
+        return self.__name
+        self.__locked = False
+    
+    def _clipInfo(self):
+        clipInfoStringList = []
+        for clip in self.__clipsSet:
+            # append string in the following format: [position (in seconds)]|[libraryClipName]|[startTime]|[endTime]
+            clipInfoStringList.append(",")
+            print(clip._getStartTime())
+            print(clip._getEndTime())
+            clipInfoStringList.append("%(position)s|%(libraryclipname)s|%(starttime)s|%(endtime)s" % {"position":clip._getPosition(), "libraryclipname":clip._getLibraryClip().getName(), "starttime":clip._getStartTime(), "endtime":clip._getEndTime()})
+
+        if clipInfoStringList:
+            # remove leading comma
+            clipInfoStringList.remove(",")
+        
+        return "".join(clipInfoStringList)
+    
+    def _getVolume(self):
+        return self.__volume
+    
+    def _getPanning(self):
+        return self.__panning
     
     def _addClip(self, clip):
         self.__clipsSet.add(clip)

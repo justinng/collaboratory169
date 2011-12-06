@@ -1,8 +1,9 @@
 function addClipToTrack(track, clipID, pos, clipName, startTime, endTime){
 	libraryClip = $("#clip"+String(clipName).split("\.")[0].replace(new RegExp(' ', 'g'),'_')).html()
 	trackClip = "<div id='clip"+String(clipID)+"' class='clip'>"+libraryClip+"</div>"
+	var picUrl = "url('/static/music/" + bandname + "/" + projname + "/" + String(clipName).split("\.")[0] + ".png')";
     $("#"+convertTrackNameServerToClient(track)).append(trackClip);
-	$("#clip"+String(clipID)).css("position", "absolute");
+	$("#clip"+String(clipID)).css({"position":"absolute", "background-image":picUrl, "background-repeat":"no-repeat", "background-size":"100% 100%"});
 
 	// Starting position (where you drop the clip)
 	$("#clip"+String(clipID)).css("left", secondsToPixels(pos));
@@ -13,7 +14,6 @@ function addClipToTrack(track, clipID, pos, clipName, startTime, endTime){
 	
 	// Allow a clip to be movable within a track
 	$(".clip").draggable({
-		snap: true,
 		axis: 'x',
 		helper: 'original',
 		containment: [170],

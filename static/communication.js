@@ -25,8 +25,8 @@ host = location.host;
 	}
     socket.onopen = function(event) {
     	tellServer("info", bandname+','+projname)
-        tellServer("addUser", "hobostank")
         tellServer("refresh");
+    	tellServer("addUser", username)
         setupRecord();
     }
 }

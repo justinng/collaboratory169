@@ -41,7 +41,7 @@ DROP TABLE IF EXISTS Project;
 CREATE TABLE Project (
 	ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	name VARCHAR(100) NOT NULL,
-	files VARCHAR(1000) NOT NULL /* a list of filenames, comma separated.*/
+	files VARCHAR(1000) /* a list of filenames, comma separated.*/
 );
 
 DROP TABLE IF EXISTS Track;
@@ -54,6 +54,7 @@ CREATE TABLE Track (
 	panning INT, /*the id of the user*/
 	FOREIGN KEY (projectID)
 		REFERENCES Project(ID)
+		ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS BandOwnsProjects;
@@ -61,9 +62,11 @@ CREATE TABLE BandOwnsProjects (
 	bandName VARCHAR(100) NOT NULL,
 	ID INT NOT NULL,
 	FOREIGN KEY (bandName)
-		REFERENCES Band(name),
+		REFERENCES Band(name)
+		ON DELETE CASCADE,
 	FOREIGN KEY (ID)
 		REFERENCES Project(ID)
+		ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS UserOwnsProjects;
@@ -71,9 +74,11 @@ CREATE TABLE UserOwnsProjects (
 	email VARCHAR(100) NOT NULL,
 	ID INT NOT NULL,
 	FOREIGN KEY (email)
-		REFERENCES User(email),
+		REFERENCES User(email)
+		ON DELETE CASCADE,
 	FOREIGN KEY (ID)
 		REFERENCES Project(ID)
+		ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS MemberOf;
@@ -81,9 +86,11 @@ CREATE TABLE MemberOf (
 	email VARCHAR(100) NOT NULL,
 	bandName VARCHAR(100) NOT NULL,
 	FOREIGN KEY (email)
-		REFERENCES User(email),
+		REFERENCES User(email)
+		ON DELETE CASCADE,
 	FOREIGN KEY (bandName)
 		REFERENCES Band(name)
+		ON DELETE CASCADE
 );
 
 CREATE INDEX TrackIndex

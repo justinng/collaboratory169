@@ -173,6 +173,9 @@ function playClip(audioObject, startTime, endTime, timeout, trackName){
         		//this.play();
     			}, 
     			false);
+		channels[i].audio.addEventListener('onended', function(){
+    			this.available = true;
+    		});
     		channels[i].audio.load();
     		channelTimeout[i] = setTimeout("console.log('pause');"+"channels[" + i + "].audio.pause(); channels[" + i + "].available = true", endTime*1000);
     		//console.log("audio loaded");
@@ -243,7 +246,7 @@ function incrementCursor(increment) {
 
 
 
-var firstTime = true;
+var firstTime = false;
 function record() {
     var lockCount = 0;
     var lockedTrack;
@@ -259,7 +262,7 @@ function record() {
     }
     var flash_record = document.getElementById("flash_record");
     flash_record.style.display = "block";
-    setTimeout("document.getElementById('flash_record').record('"+lockedTrack+"','"+position+"','"+firstTime+"')", 500);
+    setTimeout("document.getElementById('flash_record').record('"+lockedTrack+"','"+position+"'," + firstTime + ")", 500);
     if (firstTime) {firstTime = false;}
 }
 function hideFlash() {

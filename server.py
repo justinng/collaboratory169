@@ -3,6 +3,8 @@ import tornado.ioloop
 import tornado.options
 import tornado.web
 import tornado.websocket
+import tornado.database
+import tornado.escape
 import os.path
 import mimetypes
 from py.AudioUtil import *
@@ -14,34 +16,62 @@ mimetypes.add_type("audio", "wav")
 mimetypes.add_type("image", "jpg")
 mimetypes.add_type("image", "png")
 define("port", default=8093, help="run on the given port", type=int)
+define("mysql_host", default="107.20.135.212:3306", help="database host")
+define("mysql_database", default="collaboratory", help="database name")
+define("mysql_user", default="collaboratory", help="database user")
+define("mysql_password", default="welcome", help="database password")
 #change this to change source html file:
 source = "projectGUI.html"
+#source = "splash.html"
 #source = "flashtest.html"
-source = "profilepage.html"
+#source = "profilepage.html"
 #uncomment the following line to try the test
 #source = "test_dispatch.html"
 
 
 class Application(tornado.web.Application):
     def __init__(self):
-        handlers = [  (r"/(.+\.html)?", MainHandler), (r"/project/(.+)/(.+)", ProjectHandler), (r"/ws", SocketHandler), (r"/upload/(.+)/(.+)", UploadHandler), (r"/templates/(.*)", TemplateHandler), (r"/login", LoginHandler)]
+        handlers = [  (r"/(.+\.html)?", MainHandler),
+            (r"/ws", SocketHandler),
+            (r"/upload/(.+)/(.+)", UploadHandler),
+            (r"/templates/(.*)", TemplateHandler),
+            (r"/login", LoginHandler),
+            (r"/logout", LogoutHandler),
+            (r"/profile", ProfileHandler),
+            (r"/addproj", AddProjectHandler),
+            (r"/manage/([a-zA-Z0-9\s]+)", ManageBandHandler),
+            (r"/signup", SignupHandler),
+            (r"/profile/delete", BandDeleteHandler),
+	        (r"/project/(.+)/(.+)/(.+)", ProjectHandler) ]
+
         settings = dict(
+            #maybe change the secret later to be more secured
+            cookie_secret= "61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
+            login_url= "/login",
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
             static_path=os.path.join(os.path.dirname(__file__), "static"),
 	    autoescape=None,	
         )
         tornado.web.Application.__init__(self, handlers, **settings)
 
-class MainHandler(tornado.web.RequestHandler):
+class BaseHandler(tornado.web.RequestHandler):
+    def get_current_user(self):
+        user_id = self.get_secure_cookie("coluser")
+        if not user_id: return None
+        return db.get("SELECT * FROM User WHERE ID = %s", int(user_id))
+
+
+class MainHandler(BaseHandler):
     def get(self, file):
         if file:
             self.render(file)
         else:
-            self.render(source)
+#            self.render(source)
+            self.redirect("/login")
 
 class ProjectHandler(tornado.web.RequestHandler):
-    def get(self, bandname, projname):
-        self.render("projectGUI.html", band=bandname, proj=projname)
+    def get(self, bandname, projname, username):
+        self.render("projectGUI.html", band=bandname, proj=projname, user=username)
 
 class UploadHandler(tornado.web.RequestHandler):
     def post(self, band, project):
@@ -91,9 +121,186 @@ class UploadHandler(tornado.web.RequestHandler):
                 logging.info("Uploading file: "+path)
                 logging.info("Length of uploaded wav is: %(duration)s ms" % {"duration": getWaveFileDuration(path)})
 
-class LoginHandler(tornado.web.RequestHandler):
+class SignupHandler(BaseHandler):
     def get(self):
-        self.render("splash.html", imgsrc = "/images/Chrysanthemum.jpg")
+        error = None
+        self.render("signup.html", error=error)
+
+    def post(self):
+        name = self.get_argument("name", strip=True)
+        email = self.get_argument("email", strip=True)
+        password = self.get_argument("password", strip=True)
+        confirm = self.get_argument("conpassword", strip=True)
+        if not len(password) >= 4:
+            self.clear()
+            self.render("signup.html", error="Please provide a longer password.")
+            return None
+        #check if password matches
+        if not password == confirm:
+            self.clear()
+            self.render("signup.html", error="Your password did not match.")
+            return None
+        #validate if new user
+        validate = db.get("SELECT name FROM User WHERE email = %s", email)
+        if validate:
+            self.clear()
+            #User already has account
+            self.render("signup.html", error="Your are already registered")
+            return None
+        else:
+            #lets put the user into the database.
+            #encrypt the password
+            encrypted = db.get("SELECT SHA1(%s) AS password", password)
+            db.execute("INSERT INTO User (email, name, password) VALUES (%s, %s, %s)", email, name, encrypted.password)
+            same = db.get("SELECT password from User where email=%s", email)
+            self.render("thankyou.html", name=name)
+
+
+class LoginHandler(BaseHandler):
+    def get(self):
+        self.render("splash.html", error=None)
+        
+    def post(self):
+        email = self.get_argument("uname", strip=True);
+        password = self.get_argument("pass", strip=True);
+        encPassword = db.get("SELECT SHA1(%s) AS password", password)
+        result = db.get("Select * from User where email= %s", email)
+        if not result:
+            self.clear()
+            error = "we do not recognize you"
+            self.render("splash.html", error=error)
+            return None
+        if encPassword.password == result.password:
+            self.set_secure_cookie("coluser", str(result.ID))
+            page = "/profile"
+            self.redirect(page, permanent=False)
+        else:
+            self.clear()
+            error = "your password did not match"
+            self.render("splash.html", error=error)
+            return None
+
+class LogoutHandler(BaseHandler):
+    def get(self):
+        self.clear_cookie("coluser")
+        self.redirect("/login", permanent=False)
+
+class ManageBandHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self, band):
+        bandName = band
+        members = db.query("SELECT u.name,u.email FROM User u, MemberOf m WHERE m.bandName = %s AND m.email = u.email", bandName)
+        projects = db.query("SELECT p.name, p.ID FROM BandOwnsProjects b, Project p WHERE b.bandName = %s AND b.ID = p.ID", bandName)
+        self.render("manage.html", band=bandName, members=members, projects=projects)
+
+    def post(self, band):
+        bandName = band
+        try:
+            addMembers = self.get_argument("add")
+        except:
+            addMembers = "empty"
+        try:
+            delMembers = self.get_arguments("delMembers")
+        except:
+            delMembers = "empty"
+        try:
+            delProjects = self.get_arguments("delProjects")
+        except:
+            delProjects = "empty"
+        registered = db.query("SELECT email FROM User")
+        registeredList = [ ] #put the queried result in a list
+        for u in registered:
+            registeredList.append(u.email)
+        if (delMembers != "empty"):
+            for member in delMembers:
+                db.execute("DELETE FROM MemberOf WHERE email=%s AND bandName=%s", member, bandName)
+        if (delProjects != "empty"):
+            for project in delProjects:
+                db.execute("DELETE FROM Project WHERE ID=%s", project)
+        if (addMembers != "empty"):
+            notAdded = ""
+            members = addMembers.split(', ')
+            for member in members:
+                if (member in registeredList):
+                    db.execute("INSERT INTO MemberOf (email, bandName) VALUES (%s, %s)", member, bandName)
+                else:
+                    notAdded += " "+member
+            if not notAdded == "":
+                self.write("These people are not added "+notAdded)
+        self.redirect("/profile")
+
+
+class AddProjectHandler(BaseHandler):
+    @tornado.web.authenticated
+    def post(self):
+        projName = self.get_argument("projName")
+        bandName = self.get_argument("band")
+        db.execute("INSERT INTO Project (name) VALUES (%s)", projName) #insert to project table
+        rowid = db.query("SELECT LAST_INSERT_ID() AS id") #get the id of the project that was inserted
+        id = rowid.pop()
+        db.execute("INSERT INTO BandOwnsProjects (bandName, ID) VALUES (%s, %s)", bandName, id.id)
+        self.redirect("/profile", permanent=False)
+
+class ProfileHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        param = self.get_current_user()
+        bands = db.query("SELECT bandName FROM MemberOf WHERE email = %s", param.email)
+        owns = db.query("SELECT name FROM Band WHERE owner = %s", param.ID)
+        ownsList = [ ]
+        for o in owns:
+            ownsList.append(o.name)
+#        bandsAndProjects = db.query("SELECT bop.bandName, p.name FROM Band b, Project p, BandOwnsProjects bop WHERE b.owner = %s AND bop.bandName = b.name AND bop.ID = p.ID", param.ID)
+        bandsAndProjects = db.query("SELECT bop.bandName, p.name FROM MemberOf mo, Project p, BandOwnsProjects bop WHERE mo.email = %s AND bop.bandName = mo.bandName AND bop.ID = p.ID", param.email)
+        mapping = dict()
+        for item in bandsAndProjects:
+            if mapping.has_key(item.bandName):
+                temp = mapping[item.bandName]
+                newlist = temp.append(item.name)
+#                mapping[item.bandName] = newlist (this not needed, still doesnt make sense for me)
+            else:
+                mapping[item.bandName] = [item.name]
+        self.render("profilepage.html", param = param, bands=bands, ownsList=ownsList, mapping=mapping)
+
+    def post(self):
+        user = self.get_current_user()
+        bandName = self.get_argument("bandName")
+        people = self.get_argument("people")
+        registered = db.query("SELECT email FROM User")
+        isBandExist = db.query("SELECT * FROM Band WHERE name = %s", bandName)
+        peopleAdded = ""
+        peopleFailed = ""
+        registeredList = [ ] #put the queried result in a list
+        for u in registered:
+            registeredList.append(u.email)
+        if isBandExist:
+            self.write("band already exists")
+            return None
+        else:
+            db.execute("INSERT INTO Band (name, owner) VALUES(%s, %s)", bandName, user.ID)
+            db.execute("INSERT INTO MemberOf (email, bandName) VALUES(%s, %s)", user.email, bandName)
+        if (people != "empty"):
+            members = people.split(', ')
+            for member in members:
+                if (member in registeredList):
+                    db.execute("INSERT INTO MemberOf (email, bandName) VALUES (%s, %s)", member, bandName)
+                    peopleAdded += " "+member
+                else:
+                    peopleFailed += " "+member
+            if not peopleFailed == "":
+                self.write("People added are "+ peopleAdded+"\n"+"This user(s) does not exist "+peopleFailed)
+                return None
+            else:
+                self.write("People added are "+ peopleAdded)
+                return None
+#        self.redirect("/profile", permanent=False)
+
+class BandDeleteHandler(BaseHandler):
+    @tornado.web.authenticated
+    def post(self):
+        bandName = self.get_argument("bandName")
+        db.execute("DELETE FROM Band WHERE name=%s", bandName)
+        self.redirect("/profile", permanent=False)
 
 class TemplateHandler(tornado.web.RequestHandler):
     def get(self, file):
@@ -129,6 +336,8 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             SocketHandler.lockTrackMessage(self, args[0], args, message)
         elif action == "refresh":
             SocketHandler.refreshClient(self)
+        elif action == "save":
+            session.save(self.bandname, self.projname)
         elif action == "addClipToTrack":
             SocketHandler.addClipToTrackMessage(self, args, eval_string, message)
         elif action == "cloneClip":
@@ -171,6 +380,9 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
                 self.write_message("addClipToTrack: " + argstring)
                 if clip._Clip__locked:
                     self.write_message("lockClip: "+str(clip._Clip__clipID))
+        for username in self.proj._Project__currentUsersMap:
+            print("telling about: " + username)
+            self.write_message("addUser: " + username + "," + self.proj._Project__currentUsersMap[username])
 
     def addUserMessage(self, args, eval_string, message):
         color = eval(eval_string)
@@ -288,7 +500,11 @@ def main():
 	logging.info("starting ioloop")
     	tornado.ioloop.IOLoop.instance().start()
 
-session = SessionManager()
+
+# Have one global connection to the blog DB across all handlers
+db = tornado.database.Connection(host=options.mysql_host, database=options.mysql_database,
+                                 user=options.mysql_user, password=options.mysql_password)
+session = SessionManager(db)
 
 main()
 

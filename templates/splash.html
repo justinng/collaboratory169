@@ -1,59 +1,29 @@
-<!DOCTYPE>
-<html>
-<head>
-    <title>ColLaboratory</title>
-    <style>
-        div.login {
-            margin-right: auto;
-            margin-left: auto;
-            width: 270px;
-            height: 100px;
-            background: black;
-            color: white;
-            padding: 10px;
-        }
-        div.login > label {
-            display: block;
-        }
-        div.login > input {
-            display: block;
-        }
-
-        table.fields > tr {
-            padding-top: 10px;
-        }
-
-        table.fields td.label {
-            color: white;
-            text-align: right;
-            width: 30%;
-        }
-
-        table.fields td.submit {
-            width: 100%;
-            text-align: center;
-        }
-    </style>
-</head>
+{% extends base.html %}
+{% block title %} Log-in Page {% end %}
+{% block body %}
 <body>
 <div class="login">
-    <form>
+    {% if error != None %}<p>Sorry, {{ escape(error) }}</p>{% end %}
+    <form method="post" action="/login">
         <table class="fields">
             <tr>
                 <td class="label"><label>E-mail</label></td>
-                <td><input type="email" value="" /></td>
+                <td><input type="email" value="" name="uname"/></td>
             </tr>
             <tr>
                 <td class="label"><label>Password</label></td>
-                <td><input type="password" value="" /></td>
+                <td><input type="password" value="" name="pass"/></td>
             </tr>
             <tr>
                 <td class="submit">
-                    <input type="button" value="Log-in" />
+                    <input type="submit" value="Log In" />
+                </td>
+                <td class="register">
+                    <a href="/signup">Register</a>
                 </td>
             </tr>
         </table>
     </form>
 </div>
 </body>
-</html>
+{% end %}

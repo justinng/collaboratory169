@@ -12,6 +12,7 @@
 	<script type="text/javascript" src="/static/newLibraryClip.js"></script>
 	<script type="text/javascript" src="/static/addClipToTrack.js"></script>
 	<script type="text/javascript" src="/static/trackDropEventHandler.js"></script>
+	<script type="text/javascript" src="/static/activeUsersDisplay.js"></script>
 	<script type="text/javascript" src="/static/js/html5slider.js"></script>
        <script type="text/javascript" src="/static/swfobject.js"></script>
     <script type="text/javascript" src="/static/play.js"></script>
@@ -21,6 +22,7 @@
     <script type="text/javascript">
         var bandname = '{{band}}'; //default
         var projname = '{{proj}}'; //default
+        var username = '{{user}}';
         var sliderVal = 5; //default
         var oldTrim = 0; //default use for trimming clip, the left edge
         //comment these out for single-project testing - this is a temporary way to designate different projects
@@ -72,6 +74,12 @@
             }
             if (action == "deleteClip") {
                 deleteClip(args)
+            }
+            if (action == "addUser") {
+            	addUser(args[0], args[1]);
+            }
+            if (action == "removeUser") {
+            	removeUser(args[0]);
             }
             //no clone clip
         }
@@ -236,15 +244,19 @@
             }
             //tellServer("newLibraryClip", fileName[fileName.length - 1]);
         }
-		
-		function overHandler(event, ui) {
-			cssWidth = $(".track").css("width");
-			cssWidth = cssWidth.replace("px", "");
-			cssWidth = parseInt(cssWidth);
-			cssWidth = cssWidth + 50;
-			cssWidth = String(cssWidth) + "px";
-			$(".track").css("width", cssWidth);
-		}
+        
+        function saveCommandDispatcher(){
+        	tellServer("save", "0");
+        }
+
+	function overHandler(event, ui) {
+		cssWidth = $(".track").css("width");
+		cssWidth = cssWidth.replace("px", "");
+		cssWidth = parseInt(cssWidth);
+		cssWidth = cssWidth + 5*sliderVal;
+		cssWidth = String(cssWidth) + "px";
+		$(".track").css("width", cssWidth);
+	}
 
 		//Drag and Drop functionality on startup, assuming all objects are already there
 		
@@ -426,7 +438,7 @@
 				//$('.track').each(function() {
 					//$(this).css("width", String(parseInt($(this).css("width")) * ui.value / sliderVal) + "px")
 				//});
-				$(".track").css("width", String(farthestClip + 20) + "px");
+				$(".track").css("width", String(farthestClip + 5*sliderVal) + "px");
 			}
 			$("#playbackCursor").css("left", String(currentPosition*sliderVal)+"px");
 		}
@@ -446,19 +458,21 @@
 
 <body id="projectbody">
 <header >ColLaborate! {{ band +" - "+proj }}</header>
+<a href="/profile">Return to Profile</a>
 <br />
 <div id="controls">
     <button id= "Undo" type="button">Undo</button>
     <button id="Clone" type="button" onclick="cloneHandler()">Clone</button>
     <button id= "Delete" type="button" onClick="deleteHandler()">Delete</button>
-    <button id= "play"type="button" onClick="play()">Play</button>
-    <button id= "pause"type="button" onClick="pause()">Pause</button>
-    <button id= "stop"type="button" onClick="stop()">Stop</button>
-    <button id= "record"type="button" onClick="record()">Record</button>
+    <button id= "play"type="button" onClick="play()"><img src="/static/images/play.png" height="25px" width="25px" align="middle" /></button>
+    <button id= "pause"type="button" onClick="pause()"><img src="/static/images/pause.png" height="25px" width = "25px" align="middle" /></button>
+    <button id= "stop"type="button" onClick="stop()"><img src="/static/images/stop.png" height="25px" width = "25px" align="middle" /></button>
+    <button id= "record"type="button" onClick="record()"><img src="/static/images/record.png" height="25px" width = "25px" align="middle" /></button>
     <button id="newTrack" type="button">New Track</button>
-  <form id="uploadform" enctype="multipart/form-data" method="POST" name="fileForm">
+    <button id="save" type="button" onClick="saveCommandDispatcher()">Save</button>
+    <form id="uploadform" enctype="multipart/form-data" method="POST" name="fileForm">
         <input type="file" id="audio_file" name="audio" onchange="verifyWAV()"/>
-        <input type="submit" id="submitID" name="submitName" onclick = "initUpload();">
+        <input type="submit" id="submitID" name="submitName" value="Upload Clip" onclick = "initUpload();">
         <span id="status" style="display:none">uploading...</span>
         <iframe id="upload_target_iframe" name="upload_target_iframe" src="" style="width:0;height:0;border:0px"></iframe>
     </form>
@@ -473,10 +487,9 @@
 	</div>
 </div>
    
-	<div id="library" class="sidebar"></div>
+    <div id="library" class="sidebar"></div>
+    <div id="usersDisplay" class="sidebarWhite"></div>
     <div id="timeLine" style="display:block;width:820px;background-color:blue;"></div>
-	
-
 
 </body>
 </html>

@@ -121,3 +121,24 @@
     display:none;
 	display:none;
 }
+
+.sidebarWhite {
+    width:260px;
+	margin: 10px;
+	padding: 10px;
+    background-color:white;
+    height:490px;
+	float: left;
+	overflow-y: auto;
+}
+
+.userDisplayEntry {
+    background-color:#ffffff;
+    margin:2px;
+    display: inline-block;
+	width: 250px;
+	height: 24px;
+}
+.userName {
+    display: block;
+}

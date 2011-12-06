@@ -1,0 +1,258 @@
+@charset "utf-8";
+/* CSS Document for Collaboratory*/
+
+/*log-in/splash page */
+div.login {
+    margin-right: auto;
+    margin-left: auto;
+    width: 270px;
+    background: black;
+    color: white;
+    padding: 10px;
+}
+div.login > label {
+    display: block;
+}
+div.login > input {
+    display: block;
+}
+
+table.fields > tr {
+    padding-top: 10px;
+}
+
+table.fields td.label {
+    color: white;
+    text-align: right;
+    width: 30%;
+}
+
+table.fields td.submit {
+    width: 100%;
+    text-align: center;
+}
+
+table.fields td.register a {
+    text-decoration: none;
+    color: #fff
+}
+
+/*profile page*/
+#profilepage, #signup, #managePage {
+	position: relative;
+	display: block;
+	margin-left: 50px;
+	width: 800px;
+	border: 3px solid black;
+	border-top-width: 0px;
+}
+
+div.topbar {
+	display:block;
+	position: relative;
+	width: 800px;
+	height: 200px;
+	padding: 5px;
+}
+
+.topbar #userName {
+	color: red;
+	font: 28px Helvetica, Arial, Verdana;
+	display: inline-block;
+	width: 300px;
+}
+
+.topbar span.logout {
+	float: right;
+	margin-right: 50px;
+	color: blue;
+	font-family: Arial;
+	display: inline-block;
+}
+
+div.bands {
+	display: inline-block;
+	position: relative;
+	width: 400px;
+	padding: 10px;
+}
+
+div.bands span.myBands {
+	font: 20px Helvetica, Arial, Verdana;
+	display: block;
+	color: red;
+}
+
+div.bands ul.bandNames {
+	list-style: none;
+	margin: 20px 0 0 20px;
+	display: inline-block;
+}
+
+div.bands ul.bandNames li {
+	list-style: none;
+}
+
+ul.bandNames div.band h4.bandName {
+	font: 20px Verdana;
+	color: green;
+	cursor: pointer;
+	display:inline-block;
+	vertical-align:middle;
+}
+
+ul.bandNames div.band h4.bandName:hover {
+	color: gold;
+}
+
+img.manageBand, img.addProject, img.deleteBand {
+	width: 25px;
+	height: 25px;
+	display: inline-block;
+	vertical-align:middle;
+	padding-left: 3px;
+    cursor: pointer;
+}
+
+img.deleteBand {
+    width: 20px;
+    height: 20px;
+    padding-top: 4px;
+}
+
+
+div.band ul.projects {
+	display: none;
+	list-style: none;
+}
+
+ul.projects li {
+	list-style: none;
+	font: 16px Helvetica;
+	color: blue;
+	padding-bottom: 5px;
+}
+
+button.newband {
+    display: block;
+    position: relative;
+    margin: 30px 0 0 40px;
+}
+
+div#newBand, div#newProject, div#deleteBand {
+    width: 300px;
+    border-radius: 8px;
+    background-color: #ccc;
+    z-index: 20;
+    border: 1px #fff;
+    display: none;
+    position: absolute;
+    top: 9999px;
+    left: 0;
+}
+
+div#deleteBand {
+    padding: 15px;
+}
+
+#newBand .field, #newProject .field {
+    padding: 15px;
+}
+
+#newBand .field input, #newProject .field input, #managePage .field input {
+    width: 240px;
+}
+
+button.addband, button.cancel, button.addproject {
+    display: inline-block;
+    margin: 15px 0 15px 15px;
+}
+
+input.verify, button.cancel {
+    display: inline-block;
+    margin: 15px 0 15px 15px;
+}
+
+#deleteBand form {
+    display: inline-block;
+}
+
+/* Start if RecentProjects tab */
+#recentProjects {
+	border: 2px solid black;
+	border-right-width: 0px;
+	display: inline-block;
+	position: absolute;
+	top: 200px;
+	right: 0;
+	width: 200px;
+	padding: 10px;
+}
+
+#recentProjects span {
+	font: 25px Helvetica;
+	color: red;
+}
+
+#recentProjects ul.recent {
+	list-style: none;
+	padding: 0;
+}
+
+#recentProjects ul.recent li {
+	list-style: none;
+	font: 16px Verdana;
+	padding-bottom: 10px;
+	color: blue;
+}
+
+/* Signup page starts here */
+#signup h1.signup, #managePage h1{
+	color: blue;
+	font: 28px Helvetica, Arial, Verdana;
+	margin: 0 0 50px 30px;
+}
+
+#signup .form, #managePage .form {
+	display: block;
+	margin-left: 30px;
+	width: 700px;
+}
+
+#signup div.field {
+	display: inline-block;
+	width: 300px;
+	margin-right: 20px;
+	margin-bottom: 20px;
+}
+
+div.field label {
+	display: block;
+	font: 15px Verdana, Arial, Helvetica;
+	color: red;
+}
+
+div.field input {
+	display: block;
+	font-family: Verdana;
+}
+
+/*manage page */
+#managePage div.field {
+    padding-bottom: 30px;
+}
+
+div.selection {
+    padding-bottom: 30px;
+}
+
+div.selection span {
+    display: block;
+    color: red;
+    font: 15px Verdana, Arial, Helvetica;
+}
+
+
+
+	
+	

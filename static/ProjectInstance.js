@@ -40,6 +40,7 @@ Project.prototype.addClipToTrack = function(trackName, clipID, position, library
 }
 
 Project.prototype.deleteClip = function(clipID){
+	delete this.trackMap[this.clipMap[clipID].trackName].clipMap[clipID];
 	delete this.clipMap[clipID];
 }
 
